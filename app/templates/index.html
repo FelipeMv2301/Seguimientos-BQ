@@ -16,23 +16,23 @@
       <h1>Seguimiento de tu pedido</h1>
       <p class="subtitulo">Busca el estado de tu envío con el N° de Orden de Transporte (OT) que te dimos.</p>
 
-      <form method="get" action="/seguimiento">
+      <form method="get" action="/seguimiento" id="form-busqueda">
         <label for="ot">N° de OT</label>
         <input type="text" id="ot" name="ot" value="{{ buscado or '' }}" required placeholder="Ej: 12345">
-        <button type="submit">Buscar</button>
+        <button type="submit" id="boton-buscar">Buscar</button>
       </form>
 
       {% if buscado %}
         {% if resultado %}
-        <section class="resultado">
+        <section class="resultado aparece">
           {% if pasos %}
           <div class="progreso">
             {% for paso in pasos %}
-            <div class="paso {{ 'completo' if loop.index0 < paso_actual else 'actual' if loop.index0 == paso_actual else '' }}">
+            <div class="paso {{ 'completo' if loop.index0 < paso_actual else 'actual' if loop.index0 == paso_actual else '' }} aparece" style="animation-delay: {{ loop.index0 * 0.09 }}s">
               <span class="circulo">{{ loop.index }}</span>
               <span class="etiqueta">{{ paso }}</span>
             </div>
-            {% if not loop.last %}<div class="linea {{ 'completa' if loop.index0 < paso_actual else '' }}"></div>{% endif %}
+            {% if not loop.last %}<div class="linea {{ 'completa' if loop.index0 < paso_actual else '' }} aparece" style="animation-delay: {{ loop.index0 * 0.09 + 0.05 }}s"></div>{% endif %}
             {% endfor %}
           </div>
           {% endif %}
@@ -49,7 +49,7 @@
           </dl>
         </section>
         {% else %}
-        <p class="no-encontrado">
+        <p class="no-encontrado aparece">
           No encontramos ningún envío con la OT <strong>{{ buscado }}</strong>.
           Si tu pedido fue con <strong>Starken</strong>, revisa en
           <a href="https://www.starken.cl/seguimiento" target="_blank" rel="noopener">starken.cl/seguimiento</a>.
@@ -60,5 +60,15 @@
       <p class="ayuda">¿Dudas? Escríbenos a <a href="mailto:web@bioquimica.cl">web@bioquimica.cl</a>.</p>
     </div>
   </main>
+
+  <script>
+    //Feedback visual mientras se recarga la página con el resultado nuevo — sin esto el botón
+    //no daba ninguna señal entre el clic y la respuesta del servidor.
+    document.getElementById("form-busqueda").addEventListener("submit", function () {
+      var boton = document.getElementById("boton-buscar");
+      boton.disabled = true;
+      boton.innerHTML = "Buscando<span class=\"spinner\" aria-hidden=\"true\"></span>";
+    });
+  </script>
 </body>
 </html>
