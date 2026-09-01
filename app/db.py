@@ -48,3 +48,14 @@ def buscar_por_ot(cursor, ot):
 
 def abrir_cursor(conexion):
     return conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+
+#Abre conexión, busca y cierra — todo junto, para que las rutas de FastAPI llamen una sola función.
+#En los tests de endpoints se mockea esta función completa (no hace falta Postgres para probar rutas).
+def buscar_por_ot_en_bd(ot):
+    conexion = obtener_conexion()
+    try:
+        cursor = abrir_cursor(conexion)
+        return buscar_por_ot(cursor, ot)
+    finally:
+        conexion.close()

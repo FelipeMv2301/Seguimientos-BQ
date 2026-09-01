@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seguimiento de tu pedido — Bioquímica.cl</title>
+  <link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+  <main>
+    <div class="encabezado">
+      <img src="/static/images/logo_blanco.png" alt="Bioquímica.cl">
+    </div>
+
+    <div class="cuerpo">
+      <h1>Seguimiento de tu pedido</h1>
+      <p class="subtitulo">Busca el estado de tu envío con el N° de Orden de Transporte (OT) que te dimos.</p>
+
+      <form method="get" action="/seguimiento">
+        <label for="ot">N° de OT</label>
+        <input type="text" id="ot" name="ot" value="{{ buscado or '' }}" required placeholder="Ej: 12345">
+        <button type="submit">Buscar</button>
+      </form>
+
+      {% if buscado %}
+        {% if resultado %}
+        <section class="resultado">
+          {% if pasos %}
+          <div class="progreso">
+            {% for paso in pasos %}
+            <div class="paso {{ 'completo' if loop.index0 < paso_actual else 'actual' if loop.index0 == paso_actual else '' }}">
+              <span class="circulo">{{ loop.index }}</span>
+              <span class="etiqueta">{{ paso }}</span>
+            </div>
+            {% if not loop.last %}<div class="linea {{ 'completa' if loop.index0 < paso_actual else '' }}"></div>{% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if rechazado %}
+          <p class="rechazado">El destinatario rechazó este paquete al momento de la entrega.</p>
+          {% endif %}
+          <dl>
+            <dt>OT</dt><dd>{{ resultado.ot }}</dd>
+            <dt>Courier</dt><dd>{{ resultado.courier_legible }}</dd>
+            <dt>Estado</dt><dd>{{ resultado.estado }}</dd>
+            <dt>Dirección de despacho</dt><dd>{{ resultado.direccion or "—" }}</dd>
+            <dt>Última actualización</dt>
+            <dd>{{ resultado.actualizado_en.strftime("%d-%m-%Y %H:%M") if resultado.actualizado_en else "—" }}</dd>
+          </dl>
+        </section>
+        {% else %}
+        <p class="no-encontrado">
+          No encontramos ningún envío con la OT <strong>{{ buscado }}</strong>.
+          Si tu pedido fue con <strong>Starken</strong>, revisa en
+          <a href="https://www.starken.cl/seguimiento" target="_blank" rel="noopener">starken.cl/seguimiento</a>.
+        </p>
+        {% endif %}
+      {% endif %}
+
+      <p class="ayuda">¿Dudas? Escríbenos a <a href="mailto:web@bioquimica.cl">web@bioquimica.cl</a>.</p>
+    </div>
+  </main>
+</body>
+</html>

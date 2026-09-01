@@ -1,0 +1,185 @@
+:root {
+  color-scheme: light;
+  --header: #004a99;
+  --brand: #00b0ca;
+  --brand-ink: #076370;
+  --ink: #1a1a1a;
+  --muted: #666;
+  --line: #e0e0e0;
+  --bg: #f7f9fa;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 30rem;
+  margin: 2rem auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.encabezado {
+  background: var(--header);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.encabezado img {
+  max-height: 3.5rem;
+  width: auto;
+}
+
+.cuerpo {
+  padding: 1.5rem;
+}
+
+h1 {
+  font-size: 1.4rem;
+  color: var(--header);
+  margin: 0 0 0.25rem;
+}
+
+.subtitulo {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.25rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+input[type="text"] {
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+
+button {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover { background: var(--brand-ink); }
+
+.resultado {
+  background: var(--bg);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Barra de progreso — hoy solo se arma para MoveUP (ver app/estados.py) */
+.progreso {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.paso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  width: 4.5rem;
+}
+
+.paso .circulo {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.paso .etiqueta {
+  font-size: 0.7rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.paso.completo .circulo,
+.paso.actual .circulo {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.paso.completo .etiqueta,
+.paso.actual .etiqueta {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.linea {
+  flex: 1 1 auto;
+  height: 2px;
+  background: var(--line);
+  margin-top: 0.85rem;
+}
+
+.linea.completa { background: var(--brand); }
+
+.resultado dl { margin: 0; }
+.resultado dt { font-size: 0.75rem; color: var(--muted); margin-top: 0.6rem; }
+.resultado dt:first-child { margin-top: 0; }
+.resultado dd { margin: 0; font-size: 1rem; font-weight: 600; }
+
+.rechazado {
+  background: #fbe4e2;
+  color: #8c261d;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.no-encontrado {
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.ayuda {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+}
