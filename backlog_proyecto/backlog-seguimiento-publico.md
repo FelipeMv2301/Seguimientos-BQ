@@ -48,23 +48,31 @@ OT, dirección de despacho, courier, estado, y hora de la última actualización
 
 ## 3.1 Estados reales de courier (para la barra de progreso)
 
-**MoveUP** — mapeado 2026-09-01 con dos sondeos de solo lectura contra producción: primero lo ya
-guardado en `EnvioCourier` (~120 envíos, solo mostró `Cargado`/`Entregado`), después la API de MoveUP
-directo con rango amplio (ene-sep 2026, 465 paquetes) — reveló un tercer estado real: **`Rechazado`**
-(el destinatario rechaza el paquete al momento de la entrega). No hay documentación de MoveUP con el
-enum completo; estos 3 son los únicos vistos en datos reales:
+**MoveUP no publica el enum completo de estados en ningún lado** — se fue armando con varias rondas
+de sondeo de solo lectura contra producción, más lo que Felipe confirmó viendo paquetes en vivo en el
+panel de MoveUP/gestor-despachos-retiros (no de una lista escrita). **Probablemente sigan faltando
+estados** — esto no es un mapeo cerrado, es lo que se ha visto hasta 2026-09-01:
 
 | Estado | Significado | Trato en la barra |
 |---|---|---|
 | *(vacío)* | Sin estado reportado todavía | Paso 0 — "Pedido recibido" |
-| `Cargado` | En tránsito | Paso 1 |
-| `Entregado` | Entrega exitosa (terminal) | Paso 2 (último) |
-| `Rechazado` | Destinatario rechazó el paquete (terminal, negativo) | Se congela en el paso 1 + aviso aparte — **no** es "avanzar" a un paso 3 |
+| `Retirado` | Retirado del origen (breve, visto una vez, cambiaba de estado a los segundos) | Paso 1 |
+| `Cargado` | Cargado al vehículo | Paso 2 |
+| `En Camino` | En reparto | Paso 3 |
+| `Entregado` | Entrega exitosa (terminal) | Paso 4 (último) |
+| `Rechazado` | Destinatario rechazó el paquete (terminal, negativo) | Se congela en el paso 3 ("En Camino") + aviso aparte — **no** es "avanzar" a un paso 5 |
 
-Si aparece un estado nuevo no visto (ej. algo cayó fuera de la muestra ene-sep), la barra no se rompe —
-por defecto queda en el paso 0 (ver `app/estados.py::progreso_moveup`). Mismo método de sondeo (API con
-rango de fechas amplio, no solo lo ya guardado) sirve para cuando se mapee **Chibra** — sin datos ni
-documentación todavía, sin barra de progreso por ahora, solo el texto crudo de `estado_courier`.
+Cómo se encontró cada uno (para repetir el método si hace falta seguir completando):
+1. Lo ya guardado en `EnvioCourier` (~120 envíos): `Cargado`/`Entregado`.
+2. API de MoveUP, rango ene-sep 2026 (465 paquetes): + `Rechazado` (1 caso).
+3. Filtro `status="Retirado"` exacto (case-sensitive): 1 paquete real.
+4. Paquetes de los últimos 3 días, sin filtro (para no perder estados intermedios entre el ruido de
+   paquetes ya `Entregado`): + `En Camino` (11 de 33).
+
+Si aparece un estado nuevo no mapeado, la barra no se rompe — por defecto queda en el paso 0 (ver
+`app/estados.py::progreso_moveup`). Mismo método (sondeo con rango amplio + rango reciente, no solo lo
+ya guardado) sirve para cuando se mapee **Chibra** — sin datos ni documentación todavía, sin barra de
+progreso por ahora, solo el texto crudo de `estado_courier`.
 
 ## 4. Fases (chicas, una a la vez, cada una con sus tests)
 

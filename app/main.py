@@ -30,9 +30,11 @@ def _armar_contexto(ot, resultado):
     if resultado["courier"] in estados.COURIERS_CON_PROGRESO:
         contexto["rechazado"] = estados.es_rechazo_moveup(resultado["estado"])
         #Rechazado no es "avanzar" en la barra — se congela en el último paso alcanzado antes del
-        #rechazo (hoy siempre "Cargado", es el único paso previo posible) y se avisa aparte.
+        #rechazo (PASO_ANTES_DE_RECHAZO) y se avisa aparte.
         contexto["pasos"] = estados.PASOS_MOVEUP
-        contexto["paso_actual"] = 1 if contexto["rechazado"] else estados.progreso_moveup(resultado["estado"])
+        contexto["paso_actual"] = (
+            estados.PASO_ANTES_DE_RECHAZO if contexto["rechazado"] else estados.progreso_moveup(resultado["estado"])
+        )
     return contexto
 
 
