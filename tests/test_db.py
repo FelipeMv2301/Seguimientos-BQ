@@ -1,4 +1,6 @@
 import datetime
+from zoneinfo import ZoneInfo
+
 from app.db import buscar_por_ot
 
 
@@ -20,11 +22,13 @@ class CursorFalso:
 
 
 def test_encuentra_ot_y_arma_direccion_completa():
+    #psycopg2 devuelve datetime con tzinfo para columnas timestamptz (nunca naive) — acá en UTC,
+    #simulando que el servidor de Postgres no está en horario de Chile.
     cursor = CursorFalso({
         "orden_transporte": "12345",
         "courier": "CHIBRA",
         "estado_courier": "En tránsito",
-        "estado_courier_actualizado": datetime.datetime(2026, 9, 1, 10, 30),
+        "estado_courier_actualizado": datetime.datetime(2026, 9, 1, 13, 30, tzinfo=datetime.timezone.utc),
         "direccion_calle": "Av. Providencia 123",
         "direccion_comuna": "Providencia",
         "direccion_ciudad": "Santiago",
@@ -32,13 +36,14 @@ def test_encuentra_ot_y_arma_direccion_completa():
 
     resultado = buscar_por_ot(cursor, "12345")
 
-    assert resultado == {
-        "ot": "12345",
-        "courier": "CHIBRA",
-        "estado": "En tránsito",
-        "actualizado_en": datetime.datetime(2026, 9, 1, 10, 30),
-        "direccion": "Av. Providencia 123, Providencia, Santiago",
-    }
+    assert resultado["ot"] == "12345"
+    assert resultado["courier"] == "CHIBRA"
+    assert resultado["estado"] == "En tránsito"
+    assert resultado["direccion"] == "Av. Providencia 123, Providencia, Santiago"
+    #mismo instante que el guardado (la igualdad de datetimes aware compara el instante, no el
+    #tzinfo), pero debe quedar expresado en huso horario de Chile para mostrarlo correctamente
+    assert resultado["actualizado_en"] == datetime.datetime(2026, 9, 1, 13, 30, tzinfo=datetime.timezone.utc)
+    assert resultado["actualizado_en"].tzinfo.key == "America/Santiago"
     assert cursor.ultimos_params == ("12345",)
 
 
