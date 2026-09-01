@@ -1,0 +1,30 @@
+name: Deploy a produccion
+
+on:
+  push:
+    branches: [produccion]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    env:
+      DEPLOY_DIR: /home/bioquimicacl/Seguimientos-BQ
+
+    steps:
+      - uses: actions/checkout@v4
+
+      #rsync en vez de "cp -r": --delete refleja también los archivos borrados en el commit, y los
+      #--exclude protegen lo que no vive en git (el .env real, con secretos, nunca versionado) y el
+      #.git del checkout original.
+      - name: Sincronizar código al directorio de despliegue (sin tocar .env)
+        run: |
+          rsync -a --delete --exclude='.env' --exclude='.git' "$GITHUB_WORKSPACE"/ "$DEPLOY_DIR"/
+
+      - name: Build y reinicio del contenedor
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          docker compose build
+          docker compose up -d
+
+      - name: Limpieza de imágenes viejas
+        run: docker image prune -f

@@ -1,0 +1,27 @@
+name: Deploy a seguimientos-bq-test
+
+on:
+  push:
+    branches: [desarrollo]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    env:
+      DEPLOY_DIR: /home/bioquimicacl/Seguimientos-BQ-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sincronizar código al directorio de despliegue (sin tocar .env)
+        run: |
+          rsync -a --delete --exclude='.env' --exclude='.git' "$GITHUB_WORKSPACE"/ "$DEPLOY_DIR"/
+
+      - name: Build y reinicio del contenedor
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          docker compose build
+          docker compose up -d
+
+      - name: Limpieza de imágenes viejas
+        run: docker image prune -f

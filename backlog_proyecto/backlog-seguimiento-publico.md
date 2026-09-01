@@ -41,8 +41,8 @@ OT, dirección de despacho, courier, estado, y hora de la última actualización
 | ID | Pregunta | Bloquea |
 |---|---|---|
 | SPK-SG1 | ~~¿Repo propio o dentro de gestorBQ?~~ **Resuelto 2026-09-01**: repo propio, `github.com/FelipeMv2301/Seguimientos-BQ`, ramas `desarrollo`/`produccion`, runner self-hosted propio (`~/actions-runner-seguimientos-bq` en el servidor, mismo patrón que los otros 3 repos). | Fase 6 (deploy) |
-| SPK-SG2 | Usuario Postgres de **solo lectura**, acotado a `envios_enviocourier` y `pedidos_pedido` — falta crearlo en el server. Puedo darte el SQL exacto cuando lleguemos ahí, pero lo tienes que correr tú (acceso admin a la DB de producción). | Fase 2 (conexión real) — se puede desarrollar Fase 1-2 en local contra una Postgres de prueba mientras tanto |
-| SPK-SG3 | Dominio `seguimiento.bioquimica.cl` — falta el registro DNS y el bloque nuevo en el Caddyfile del servidor. | Fase 6 (deploy) |
+| SPK-SG2 | ~~Usuario Postgres de solo lectura~~ **Resuelto 2026-09-01**: rol `seguimiento_bq` creado, con `GRANT SELECT` **a nivel de columna** (no toda la tabla) sobre `envios_enviocourier` (id, orden_transporte, courier, estado_courier, estado_courier_actualizado) y `pedidos_pedido` (envio_id, direccion_calle, direccion_comuna, direccion_ciudad). Verificado en vivo: la consulta real funciona, y leer una columna no autorizada (`rut`) falla con "permission denied" como se esperaba. Nota de infraestructura: nadie tenía acceso admin directo a la Postgres (ni Felipe ni Tailscale, contra lo que decía `CLAUDE.md` de gestorBQ — corregir esa nota) — se resolvió con `sudo -u postgres` en el servidor. Host para conectar: `127.0.0.1` desde el propio servidor, `host.docker.internal` una vez que el servicio corra en Docker ahí mismo. | Fase 2 (conexión real) — se puede desarrollar Fase 1-2 en local contra una Postgres de prueba mientras tanto |
+| SPK-SG3 | ~~Dominio `seguimiento.bioquimica.cl`~~ **Resuelto 2026-09-01**: el servidor usa Cloudflare Tunnel (no A record directo) — Caddy corre en Docker dentro del proyecto `mirastock` (`~/mirastock/Caddyfile` + `~/mirastock/cloudflared/config.yml`, ES el Caddy real de gestorBQ también, se llegó a pensar que la config estaba perdida y no era así — ver nota corregida en `CLAUDE.md` de gestorBQ). Se agregó el bloque de Caddy + la entrada de ingress de cloudflared (mismo patrón que los otros 6 hostnames), y el registro CNAME en Cloudflare (`seguimiento` → `3ab9328f-e315-42c0-974b-1519a2aa01ff.cfargotunnel.com`, mismo túnel). | Fase 6 (deploy) |
 | SPK-SG4 | Acoplamiento de esquema: este servicio lee tablas de Django **directo**, por nombre (`envios_enviocourier`, `pedidos_pedido`) — si gestorBQ migra esas tablas (renombra columnas, etc.), este servicio se puede romper en silencio, sin que nada en gestorBQ avise. No bloquea nada ahora, pero hay que tenerlo presente a futuro (ej. anotarlo en el `CLAUDE.md` de gestorBQ como advertencia). | Ninguna fase puntual — riesgo permanente a vigilar |
 | SPK-SG5 | ~~Mensaje si buscan una OT de Starken~~ **Resuelto 2026-09-01**: mensaje de "no encontrado" que sugiere `starken.cl/seguimiento`. | Fase 3 |
 
@@ -93,8 +93,11 @@ progreso por ahora, solo el texto crudo de `estado_courier`.
    (`integraciones/email_client.py::_generar_track_url` o el llamado que arma el link de seguimiento
    en el correo) para que Chibra/MoveUP linkeen a `seguimiento.bioquimica.cl/seguimiento/<OT>` en vez
    de no tener link. Se hace en gestorBQ, no acá.
-6. **Fase 6 — Despliegue.** Resolver SPK-SG1/SPK-SG2/SPK-SG3, Dockerfile, y (si repo propio) su
-   pipeline de CI/CD.
+6. ✅ **Fase 6 — Despliegue.** Todos los spikes resueltos. `Dockerfile` (Python 3.12 slim + uvicorn),
+   `docker-compose.yml` (mismo patrón de puerto que gestorBQ: `127.0.0.1:${APP_PORT}:8000`, 8006
+   producción / 8007 test), workflows de GitHub Actions (`deploy-prod.yml`/`deploy-test.yml`,
+   deploys a `/home/bioquimicacl/Seguimientos-BQ`/`-test`). `.env` real con las credenciales de
+   `seguimiento_bq` ya puesto directo en el servidor (nunca por git).
 
 ## 5. Fuera de alcance
 
