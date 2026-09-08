@@ -28,11 +28,11 @@
           {% if pasos %}
           <div class="progreso">
             {% for paso in pasos %}
-            <div class="paso {{ 'completo' if loop.index0 < paso_actual else 'actual' if loop.index0 == paso_actual else '' }} aparece" style="animation-delay: {{ loop.index0 * 0.09 }}s">
+            <div class="paso {{ 'completo' if loop.index0 < paso_actual else 'actual' if loop.index0 == paso_actual else '' }} aparece" style="animation-delay: {{ loop.index0 * 0.18 }}s">
               <span class="circulo">{{ loop.index }}</span>
               <span class="etiqueta">{{ paso }}</span>
             </div>
-            {% if not loop.last %}<div class="linea {{ 'completa' if loop.index0 < paso_actual else '' }} aparece" style="animation-delay: {{ loop.index0 * 0.09 + 0.05 }}s"></div>{% endif %}
+            {% if not loop.last %}<div class="linea {{ 'completa' if loop.index0 < paso_actual else '' }} aparece" style="animation-delay: {{ loop.index0 * 0.18 + 0.1 }}s"></div>{% endif %}
             {% endfor %}
           </div>
           {% endif %}
@@ -57,7 +57,7 @@
         {% endif %}
       {% endif %}
 
-      <p class="ayuda">¿Dudas? Escríbenos a <a href="mailto:web@bioquimica.cl">web@bioquimica.cl</a>.</p>
+      <p class="ayuda">Si tienes dudas, contáctanos: <a href="tel:+56941139974">+56 9 4113 9974</a></p>
     </div>
   </main>
 
