@@ -1,38 +1,58 @@
 #Mapeo de estado de courier -> paso de la barra de progreso. Presentación pura, no toca la DB.
 #
-#MoveUP: mapeado con datos reales de producción (2026-09-01), en varias rondas de sondeo de solo
-#lectura (Felipe además lo confirmó viendo paquetes en vivo en el panel de MoveUP/gestor-despachos-
-#retiros, no de una lista de documentación — MoveUP no publica el enum completo de estados):
-#  1. Lo ya guardado en EnvioCourier (~120 envíos): solo "Cargado"/"Entregado".
-#  2. API de MoveUP, rango ene-sep 2026 (465 paquetes): + "Rechazado" (1 caso) — el destinatario
-#     rechaza el paquete; NO es "avanzar" en la barra, es una salida negativa, se muestra aparte.
-#  3. Filtro status="Retirado" (exacto, case-sensitive — "retirado"/"RETIRADO" no matchean): 1 paquete
-#     real, ya había cambiado de estado al reintentar segundos después — paso breve de "retirado del
-#     origen", anterior a "Cargado".
-#  4. Paquetes recién creados (últimos 3 días, sin filtro de estado): + "En Camino" (11 de 33) —
-#     viene después de "Cargado" (se carga al vehículo, después queda en camino/reparto).
-#Si aparece un estado nuevo no mapeado, el paso por defecto es 0 (no se rompe, solo no avanza la
-#barra) — puede seguir habiendo estados sin descubrir todavía, esto no pretende ser el enum completo.
+#MoveUP: actualizado 2026-09-08 con el enum REAL de su API (PackageStatus), que Felipe consiguió
+#directo — ya no es un sondeo de datos en producción como la primera versión de este mapeo (ver
+#backlog-seguimiento-publico.md sección 3.1 para el historial de cómo se armó antes de tener esto).
+#Valores reales: Cargado, Programado, En Camino, Entregado, Devolución, No Entregado, Rechazado,
+#Retirado, Recepcionado en bodega, Entregado a Blue Express.
+#
+#Decisiones (acordadas con Felipe 2026-09-08):
+#- "Entregado a Blue Express" es una entrega EXITOSA (MoveUP subcontrató el último tramo) — mismo
+#  paso final y mismo trato que "Entregado", no un estado aparte ni "ignorado" (ignorarlo lo dejaría
+#  en el paso 0, que es lo opuesto a la realidad: el paquete YA se entregó).
+#- "Rechazado", "No Entregado" y "Devolución" son desenlaces NEGATIVOS y terminales — no son "avanzar"
+#  en la barra. Se congela en el último paso positivo alcanzado (PASO_ANTES_DE_NEGATIVO) y se avisa
+#  aparte, con un mensaje específico por caso (no todos significan lo mismo).
+#- Solo se tiene el estado ACTUAL (no el historial de eventos), así que no se puede saber con certeza
+#  en qué paso positivo iba el paquete antes de un desenlace negativo — se asume que fue "En Camino"
+#  (el desenlace ocurre al momento de la entrega, ya en reparto), mismo criterio para los 3 casos.
 #
 #Chibra: TODO — sin estados mapeados todavía, no hay evidencia real ni documentación. Chibra no
 #muestra barra de progreso por ahora, solo el texto crudo de estado_courier.
-PASOS_MOVEUP = ["Pedido recibido", "Retirado", "Cargado", "En Camino", "Entregado"]
+PASOS_MOVEUP = [
+    "Pedido recibido", "Programado", "Retirado", "Recepcionado en bodega", "Cargado", "En Camino", "Entregado",
+]
 
-_ORDEN_MOVEUP = {"Retirado": 1, "Cargado": 2, "En Camino": 3, "Entregado": 4}
+_ORDEN_MOVEUP = {
+    "Programado": 1,
+    "Retirado": 2,
+    "Recepcionado en bodega": 3,
+    "Cargado": 4,
+    "En Camino": 5,
+    "Entregado": 6,
+    "Entregado a Blue Express": 6,  # entrega exitosa igual, solo cambia quién hizo el último tramo
+}
 
-ESTADO_RECHAZADO_MOVEUP = "Rechazado"
+#Mensaje específico por desenlace negativo — no todos significan lo mismo, aunque los tres congelen
+#la barra en el mismo lugar.
+_MENSAJE_NEGATIVO_MOVEUP = {
+    "Rechazado": "El destinatario rechazó este paquete al momento de la entrega.",
+    "No Entregado": "No fue posible entregar este paquete.",
+    "Devolución": "Este paquete está en proceso de devolución.",
+}
 
-#Último paso alcanzado antes de un rechazo — "En Camino" (índice de PASOS_MOVEUP), ya que el rechazo
-#ocurre al momento de la entrega, después de que el paquete sale en reparto.
-PASO_ANTES_DE_RECHAZO = 3
+#Último paso positivo alcanzado antes de un desenlace negativo — "En Camino" (índice de PASOS_MOVEUP).
+PASO_ANTES_DE_NEGATIVO = 5
 
 
 def progreso_moveup(estado_courier):
     return _ORDEN_MOVEUP.get(estado_courier, 0)
 
 
-def es_rechazo_moveup(estado_courier):
-    return estado_courier == ESTADO_RECHAZADO_MOVEUP
+#None si el estado no es un desenlace negativo — el mensaje específico si sí lo es. Reemplaza a la
+#vieja es_rechazo_moveup (booleana, solo cubría "Rechazado") ahora que hay 3 casos con mensajes propios.
+def mensaje_negativo_moveup(estado_courier):
+    return _MENSAJE_NEGATIVO_MOVEUP.get(estado_courier)
 
 
 #Couriers con barra de progreso mapeada. Se usa desde main.py para decidir si armar la barra.

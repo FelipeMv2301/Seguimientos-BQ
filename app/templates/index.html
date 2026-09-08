@@ -36,8 +36,8 @@
             {% endfor %}
           </div>
           {% endif %}
-          {% if rechazado %}
-          <p class="rechazado">El destinatario rechazó este paquete al momento de la entrega.</p>
+          {% if mensaje_negativo %}
+          <p class="rechazado">{{ mensaje_negativo }}</p>
           {% endif %}
           <dl>
             <dt>OT</dt><dd>{{ resultado.ot }}</dd>
