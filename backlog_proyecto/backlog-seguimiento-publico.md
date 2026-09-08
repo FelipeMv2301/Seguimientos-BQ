@@ -1,9 +1,9 @@
 # Backlog — Seguimientos-BQ (servicio público de seguimiento)
 
-> Estado: **Fases 1-3 hechas y subidas a `desarrollo`** (2026-09-01) — esqueleto, acceso a datos,
-> endpoints/pantallas con barra de progreso y logo real de Bioquímica. Faltan Fase 4 (pulir estilo,
-> ya adelantada en gran parte), 5 (integración con el correo de gestorBQ) y 6 (deploy). Acordado con
-> Felipe 2026-09-01: la idea nació
+> Estado: **Fases 1-3, 6 y 7 hechas** — esqueleto, endpoints/pantallas con barra de progreso y logo
+> real, deploy (self-hosted + Railway) y migración de Postgres directo a API + cache en memoria
+> (2026-09-08, ver Fase 7 en sección 4). Faltan Fase 4 (pulir estilo, ya adelantada en gran parte) y
+> Fase 5 (integración con el correo de gestorBQ). Acordado con Felipe 2026-09-01: la idea nació
 > dentro de `gestorBQ` (ver `backlog_proyecto/backlog-servicio-seguimiento-publico.md` en ese repo,
 > 2026-08-25) pero se decidió que **no vive ahí** — gestorBQ hoy es 100% autenticado (Google OAuth
 > `@bioquimica.cl`), y este es un servicio público sin login. Se gradúa a proyecto propio, en esta
@@ -32,9 +32,12 @@ OT, dirección de despacho, courier, estado, y hora de la última actualización
   en la idea original.
 - **Solo Chibra y MoveUP** — Starken ya tiene su propio tracking público
   (`https://www.starken.cl/seguimiento?codigo=...`), no se duplica acá.
-- **Acceso a datos: conexión directa de solo lectura a la Postgres de gestorBQ** (no un endpoint HTTP
-  expuesto por gestorBQ) — decisión tomada para no agregar superficie nueva al repo principal. Implica
-  un usuario Postgres propio, acotado, sin permisos de escritura (ver spike SPK-SG2).
+- ~~**Acceso a datos: conexión directa de solo lectura a la Postgres de gestorBQ**~~ **Revertido en
+  Fase 7 (2026-09-08)**: el riesgo real de tráfico público agotando conexiones de la Postgres de
+  producción pesó más que evitar agregar superficie a gestorBQ. Ahora es un endpoint HTTP propio en
+  gestorBQ (`envios/views.py::api_seguimiento_*`, con su propia auth) — ver sección 4, Fase 7. El rol
+  `seguimiento_bq` de Postgres (SPK-SG2) queda sin uso, puede darse de baja cuando se confirme el
+  redeploy con normalidad.
 
 ## 3. Spikes abiertos (resolver antes de la fase que bloquean)
 
@@ -98,6 +101,34 @@ progreso por ahora, solo el texto crudo de `estado_courier`.
    producción / 8007 test), workflows de GitHub Actions (`deploy-prod.yml`/`deploy-test.yml`,
    deploys a `/home/bioquimicacl/Seguimientos-BQ`/`-test`). `.env` real con las credenciales de
    `seguimiento_bq` ya puesto directo en el servidor (nunca por git).
+
+7. ✅ **Fase 7 — De Postgres directo a API + cache en memoria (2026-09-08).** Motivo: tráfico público
+   sin auth abriendo una conexión Postgres nueva por request contra la MISMA Postgres de gestorBQ
+   (prod) era un riesgo real de agotar conexiones (`max_connections=100`, 25 en uso hoy) si el
+   tráfico público escalaba. Decisión de Felipe: sacar la dependencia directa de Postgres, dejar el
+   servicio listo para correr también en Railway.
+   - **2 endpoints nuevos en gestorBQ** (`envios/views.py`, repo aparte): `GET
+     /envios/api/seguimiento/masivo/?dias=25` (bulk, filtrado Chibra/MoveUP, tope duro 90 días) y
+     `GET /envios/api/seguimiento/<ot>/` (individual, fallback). Auth `X-API-KEY` contra
+     `settings.SEGUIMIENTO_API_KEY` (clave DISTINTA por ambiente, no compartir prod/test).
+   - **`app/cliente_gestorbq.py`**: cliente HTTP (httpx) de los 2 endpoints — nunca vuelve a tocar
+     Postgres, todo por HTTPS pública (`GESTORBQ_API_URL`).
+   - **`app/cache.py`**: cache en memoria (dict, no SQLite ni Volume — no es fuente de verdad, se
+     rearma solo con el próximo sync si se pierde en un redeploy). `sincronizar()` reemplaza TODO el
+     dict de una (lo que ya no viene en la ventana de `DIAS_RETENCION` desaparece solo). `buscar(ot)`:
+     cache primero, validando vigencia por fecha (autolimpieza puntual si una entrada quedó vencida
+     entre syncs) → si no está o venció, cae a `obtener_por_ot` (individual) → `None` si tampoco.
+   - **`app/scheduler.py`**: `BackgroundScheduler` (APScheduler, mismo patrón que
+     `pedidos/scheduler.py` de gestorBQ, pero sin el lock — acá es un solo proceso uvicorn, no varios
+     workers de gunicorn). Sync inicial síncrono al arrancar + cada `SYNC_INTERVALO_MINUTOS` (default 5).
+   - **`app/db.py` eliminado** — ya no hay conexión Postgres en este servicio. `psycopg2-binary` fuera
+     de `requirements.txt`.
+   - **Preparado para Railway**: `Dockerfile` en forma shell (`CMD uvicorn ... --port ${PORT:-8000}`,
+     Railway inyecta `$PORT`), ya no necesita `libpq-dev/gcc` (sin psycopg2). `railway.toml` con
+     healthcheck (`/salud`). `docker-compose.yml` (self-hosted) ya no necesita
+     `extra_hosts: host.docker.internal` — la sync es por HTTPS pública, no por el bridge de Docker.
+   - Tests: `tests/test_cliente_gestorbq.py` + `tests/test_cache.py` (13 nuevos), `tests/test_db.py`
+     eliminado. Verificado además en vivo contra `gestor-test.bioquimica.cl` real (no solo mockeado).
 
 ## 5. Fuera de alcance
 

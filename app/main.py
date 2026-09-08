@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -5,11 +6,21 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app import db, estados
+from app import cache, estados, scheduler
 
 BASE_DIR = Path(__file__).parent
 
-app = FastAPI(title="Seguimientos-BQ")
+
+#Arranca el scheduler (sync inicial + cada N min) al levantar la app, lo apaga al bajarla — así el
+#cache nunca queda corriendo huérfano si uvicorn recarga o el proceso termina.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.iniciar()
+    yield
+    scheduler.detener()
+
+
+app = FastAPI(title="Seguimientos-BQ", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
@@ -45,7 +56,7 @@ def formulario(request: Request):
 
 @app.get("/seguimiento", response_class=HTMLResponse)
 def buscar(request: Request, ot: str):
-    resultado = db.buscar_por_ot_en_bd(ot)
+    resultado = cache.buscar(ot)
     return templates.TemplateResponse(request, "index.html", _armar_contexto(ot, resultado))
 
 
@@ -53,5 +64,5 @@ def buscar(request: Request, ot: str):
 #la búsqueda manual, sin ida y vuelta (nada de redirect) — misma pantalla, mismo resultado.
 @app.get("/seguimiento/{ot}", response_class=HTMLResponse)
 def ver_seguimiento(request: Request, ot: str):
-    resultado = db.buscar_por_ot_en_bd(ot)
+    resultado = cache.buscar(ot)
     return templates.TemplateResponse(request, "index.html", _armar_contexto(ot, resultado))

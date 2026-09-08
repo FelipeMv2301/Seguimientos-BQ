@@ -22,7 +22,7 @@ def test_formulario_no_muestra_resultado_de_entrada():
 
 
 def test_buscar_por_query_string_encuentra_y_muestra_progreso_moveup():
-    with patch("app.main.db.buscar_por_ot_en_bd", return_value=_RESULTADO_MOVEUP):
+    with patch("app.main.cache.buscar", return_value=_RESULTADO_MOVEUP):
         resp = client.get("/seguimiento", params={"ot": "555"})
     assert resp.status_code == 200
     assert "555" in resp.text
@@ -32,7 +32,7 @@ def test_buscar_por_query_string_encuentra_y_muestra_progreso_moveup():
 
 
 def test_ver_seguimiento_por_url_directa_del_correo():
-    with patch("app.main.db.buscar_por_ot_en_bd", return_value=_RESULTADO_MOVEUP) as mock_buscar:
+    with patch("app.main.cache.buscar", return_value=_RESULTADO_MOVEUP) as mock_buscar:
         resp = client.get("/seguimiento/555")
     assert resp.status_code == 200
     mock_buscar.assert_called_once_with("555")
@@ -40,7 +40,7 @@ def test_ver_seguimiento_por_url_directa_del_correo():
 
 
 def test_ot_no_encontrada_muestra_mensaje():
-    with patch("app.main.db.buscar_por_ot_en_bd", return_value=None):
+    with patch("app.main.cache.buscar", return_value=None):
         resp = client.get("/seguimiento/no-existe")
     assert resp.status_code == 200
     assert "No encontramos" in resp.text
@@ -49,7 +49,7 @@ def test_ot_no_encontrada_muestra_mensaje():
 
 def test_moveup_rechazado_muestra_aviso_y_no_avanza_como_entregado():
     resultado_rechazado = {**_RESULTADO_MOVEUP, "estado": "Rechazado"}
-    with patch("app.main.db.buscar_por_ot_en_bd", return_value=resultado_rechazado):
+    with patch("app.main.cache.buscar", return_value=resultado_rechazado):
         resp = client.get("/seguimiento/555")
     assert "rechazó este paquete" in resp.text
     assert "Rechazado" in resp.text
@@ -57,7 +57,7 @@ def test_moveup_rechazado_muestra_aviso_y_no_avanza_como_entregado():
 
 def test_chibra_no_muestra_barra_de_progreso():
     resultado_chibra = {**_RESULTADO_MOVEUP, "courier": "CHIBRA", "estado": "En bodega"}
-    with patch("app.main.db.buscar_por_ot_en_bd", return_value=resultado_chibra):
+    with patch("app.main.cache.buscar", return_value=resultado_chibra):
         resp = client.get("/seguimiento/555")
     assert "Chibra" in resp.text
     assert "En bodega" in resp.text

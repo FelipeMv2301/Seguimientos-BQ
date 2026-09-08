@@ -1,9 +1,9 @@
+#Uso self-hosted (servidor propio). Para Railway no hace falta este archivo — Railway detecta el
+#Dockerfile solo y usa la variable $PORT que él mismo inyecta (ver Dockerfile).
 services:
   app:
     build: .
     env_file: .env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       #APP_PORT: 8006 producción, 8007 desarrollo/test — se define en el .env de cada clon,
       #así conviven en el mismo servidor sin pisarse (mismo patrón que gestorBQ).
