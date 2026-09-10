@@ -17,8 +17,6 @@
 #  en qué paso positivo iba el paquete antes de un desenlace negativo — se asume que fue "En Camino"
 #  (el desenlace ocurre al momento de la entrega, ya en reparto), mismo criterio para los 3 casos.
 #
-#Chibra: TODO — sin estados mapeados todavía, no hay evidencia real ni documentación. Chibra no
-#muestra barra de progreso por ahora, solo el texto crudo de estado_courier.
 PASOS_MOVEUP = [
     "Pedido recibido", "Programado", "Retirado", "Recepcionado en bodega", "Cargado", "En Camino", "Entregado",
 ]
@@ -42,7 +40,7 @@ _MENSAJE_NEGATIVO_MOVEUP = {
 }
 
 #Último paso positivo alcanzado antes de un desenlace negativo — "En Camino" (índice de PASOS_MOVEUP).
-PASO_ANTES_DE_NEGATIVO = 5
+PASO_ANTES_DE_NEGATIVO_MOVEUP = 5
 
 
 def progreso_moveup(estado_courier):
@@ -55,7 +53,53 @@ def mensaje_negativo_moveup(estado_courier):
     return _MENSAJE_NEGATIVO_MOVEUP.get(estado_courier)
 
 
-#Couriers con barra de progreso mapeada. Se usa desde main.py para decidir si armar la barra.
-COURIERS_CON_PROGRESO = {"MOVEUP"}
+#Chibra: tabla de códigos entregada por Felipe 2026-09-10 (gestorBQ ya la traduce a texto largo antes
+#de mandarla, ver integraciones/seguimiento.py::ESTADOS_CHIBRA en gestorBQ — acá se trabaja con el
+#CÓDIGO crudo, no el texto, para no depender de parsear el texto largo).
+#Decisiones (acordadas con Felipe 2026-09-10):
+#- RECO (Recogida) es recogida EN ORIGEN — primer paso, antes de ORIG.
+#- ENPC (Entrega Parcial) es una entrega exitosa — mismo paso final que EFEC (mismo criterio que
+#  "Entregado a Blue Express" en MoveUP).
+#- FALT/ANUL/DEVU/CREC son desenlaces negativos y terminales — se congela en el último paso positivo
+#  alcanzado y se avisa aparte, mismo criterio que MoveUP.
+#- SIMU (Simulación) se ignora a propósito: no está en _ORDEN_CHIBRA ni en los mensajes negativos, así
+#  que un pedido con ese código simplemente no avanza (paso 0), como un código desconocido.
+#Índice 0 = "Pedido recibido" (aún sin código real, mismo default que MoveUP) — por eso los códigos
+#reales arrancan en 1, no en 0.
+PASOS_CHIBRA = [
+    "Pedido recibido", "Recogida", "En Origen", "Pendiente", "Asignada a Reparto", "En Reparto", "Entregada",
+]
+
+_ORDEN_CHIBRA = {
+    "RECO": 1,
+    "ORIG": 2,
+    "PEND": 3,
+    "ASIG": 4,
+    "REPA": 5,
+    "EFEC": 6,
+    "ENPC": 6,  # entrega parcial: exitosa igual, mismo paso final que EFEC
+}
+
+_MENSAJE_NEGATIVO_CHIBRA = {
+    "FALT": "No fue posible encontrar este paquete.",
+    "ANUL": "Este envío fue anulado.",
+    "DEVU": "Este paquete está en proceso de devolución.",
+    "CREC": "No fue posible entregar este paquete.",
+}
+
+#Último paso positivo alcanzado antes de un desenlace negativo — "En Reparto" (índice de PASOS_CHIBRA),
+#mismo criterio de MoveUP: se asume que el desenlace ocurre ya en reparto, al momento de la entrega.
+PASO_ANTES_DE_NEGATIVO_CHIBRA = 5
+
+
+def progreso_chibra(codigo):
+    codigo = (codigo or "").strip().upper()
+    return _ORDEN_CHIBRA.get(codigo, 0)
+
+
+def mensaje_negativo_chibra(codigo):
+    codigo = (codigo or "").strip().upper()
+    return _MENSAJE_NEGATIVO_CHIBRA.get(codigo)
+
 
 NOMBRE_COURIER = {"MOVEUP": "MoveUP", "CHIBRA": "Chibra"}

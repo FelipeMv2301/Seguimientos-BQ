@@ -69,6 +69,19 @@ def test_buscar_estado_vacio_muestra_mensaje_por_defecto():
     assert resultado["estado"] == "Sin actualizaciones todavía"
 
 
+def test_buscar_pasa_el_estado_codigo_para_la_barra_de_chibra():
+    cache._cache = {"555": _fila_reciente(courier="CHIBRA", estado_codigo="REPA")}
+    resultado = cache.buscar("555")
+    assert resultado["estado_codigo"] == "REPA"
+
+
+def test_buscar_sin_estado_codigo_queda_vacio_no_falla():
+    #MoveUP no manda estado_codigo — no debe reventar la normalización.
+    cache._cache = {"555": _fila_reciente()}
+    resultado = cache.buscar("555")
+    assert resultado["estado_codigo"] == ""
+
+
 def test_buscar_no_encontrada_en_cache_cae_al_endpoint_individual():
     with patch("app.cache.cliente_gestorbq.obtener_por_ot", return_value=_fila_reciente(ot="999")) as mock_individual:
         resultado = cache.buscar("999")

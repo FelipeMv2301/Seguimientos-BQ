@@ -47,6 +47,9 @@ def _normalizar(fila):
         "ot": fila["ot"],
         "courier": fila["courier"],
         "estado": fila.get("estado") or "Sin actualizaciones todavía",
+        #Código crudo (hoy solo Chibra lo manda) — para armar la barra de progreso por código en vez
+        #de parsear el texto largo de "estado" (app/estados.py::progreso_chibra).
+        "estado_codigo": fila.get("estado_codigo") or "",
         "actualizado_en": actualizado_en,
         "direccion": direccion,
     }

@@ -10,6 +10,7 @@ _RESULTADO_MOVEUP = {
     "ot": "555",
     "courier": "MOVEUP",
     "estado": "Cargado",
+    "estado_codigo": "",
     "actualizado_en": datetime.datetime(2026, 9, 1, 10, 30),
     "direccion": "Av. Providencia 123, Providencia, Santiago",
 }
@@ -55,10 +56,29 @@ def test_moveup_rechazado_muestra_aviso_y_no_avanza_como_entregado():
     assert "Rechazado" in resp.text
 
 
-def test_chibra_no_muestra_barra_de_progreso():
-    resultado_chibra = {**_RESULTADO_MOVEUP, "courier": "CHIBRA", "estado": "En bodega"}
+def test_chibra_muestra_progreso_segun_el_codigo():
+    resultado_chibra = {**_RESULTADO_MOVEUP, "courier": "CHIBRA",
+                         "estado": "EN REPARTO", "estado_codigo": "REPA"}
     with patch("app.main.cache.buscar", return_value=resultado_chibra):
         resp = client.get("/seguimiento/555")
     assert "Chibra" in resp.text
-    assert "En bodega" in resp.text
-    assert "progreso" not in resp.text  # sin estados mapeados todavía, no se arma la barra
+    assert "EN REPARTO" in resp.text
+    assert "En Reparto" in resp.text  # el paso de la barra
+    assert 'class="progreso"' in resp.text
+
+
+def test_chibra_devuelta_muestra_aviso_y_se_congela_en_en_reparto():
+    resultado_devuelto = {**_RESULTADO_MOVEUP, "courier": "CHIBRA",
+                           "estado": "DEVUELTA", "estado_codigo": "DEVU"}
+    with patch("app.main.cache.buscar", return_value=resultado_devuelto):
+        resp = client.get("/seguimiento/555")
+    assert "proceso de devolución" in resp.text
+
+
+def test_chibra_simu_no_avanza_la_barra():
+    resultado_simu = {**_RESULTADO_MOVEUP, "courier": "CHIBRA",
+                       "estado": "SIMULACION", "estado_codigo": "SIMU"}
+    with patch("app.main.cache.buscar", return_value=resultado_simu):
+        resp = client.get("/seguimiento/555")
+    assert 'class="progreso"' in resp.text
+    assert 'class="paso completo' not in resp.text  # ningún paso marcado como completado
